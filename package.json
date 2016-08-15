@@ -4,8 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "babel lib -o bin/samogon.js && ex -sc '1i|#!/usr/bin/env node' -cx bin/samogon.js",
     "flow": "flow; test $? -eq 0 -o $? -eq 2"
+  },
+  "bin": {
+    "samogon": "./bin/samogon.js"
   },
   "author": "Yury Korolev",
   "license": "MIT",
@@ -26,6 +29,7 @@
     ]
   },
   "devDependencies": {
+    "babel-cli": "^6.11.4",
     "flow-bin": "^0.30.0"
   }
 }
