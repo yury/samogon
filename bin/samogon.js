@@ -1,36 +1,37 @@
 #!/usr/bin/env node
 'use strict';
 
-var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
+var _stringify = require('babel-runtime/core-js/json/stringify');
 
-// We are expecting stding with csv format:
-//
-// HEADER: key, comments, en, ru, etc
-// app_name, "just an app name", AppName, приложение
+var _stringify2 = _interopRequireDefault(_stringify);
 
-// key modifcators:
-//   - android-only
-//   - ios-only
-//   - zero
-//   - two
-//   - few
-//   - many
-//   - other
-//   - formatted - formatted="true" for android
-//   - number - for arrays
-// example:
-// app_extension_name.ios-only
-// items_count.zero
-// items_count.two
-// items_names.0
+var _promise = require('babel-runtime/core-js/promise');
+
+var _promise2 = _interopRequireDefault(_promise);
+
+var _asyncToGenerator2 = require('babel-runtime/helpers/asyncToGenerator');
+
+var _asyncToGenerator3 = _interopRequireDefault(_asyncToGenerator2);
+
+var _entries = require('babel-runtime/core-js/object/entries');
+
+var _entries2 = _interopRequireDefault(_entries);
+
+var _slicedToArray2 = require('babel-runtime/helpers/slicedToArray');
+
+var _slicedToArray3 = _interopRequireDefault(_slicedToArray2);
+
+var _keys = require('babel-runtime/core-js/object/keys');
+
+var _keys2 = _interopRequireDefault(_keys);
 
 let readStdin = (() => {
-  var _ref3 = _asyncToGenerator(function* () {
+  var _ref3 = (0, _asyncToGenerator3.default)(function* () {
     let result = [];
     let stdin = process.stdin;
     stdin.setEncoding('utf8'); // why not? just in case
 
-    let end = new Promise(function (resolve, reject) {
+    let end = new _promise2.default(function (resolve, reject) {
       stdin.on('data', function (data) {
         return result.push(data);
       });
@@ -72,9 +73,28 @@ var _fs2 = _interopRequireDefault(_fs);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, arguments); return new Promise(function (resolve, reject) { function step(key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { return Promise.resolve(value).then(function (value) { return step("next", value); }, function (err) { return step("throw", err); }); } } return step("next"); }); }; }
-
 const PLURALS = ['zero', 'one', 'two', 'few', 'many', 'other'];
+
+// We are expecting stding with csv format:
+//
+// HEADER: key, comments, en, ru, etc
+// app_name, "just an app name", AppName, приложение
+
+// key modifcators:
+//   - android-only
+//   - ios-only
+//   - zero
+//   - two
+//   - few
+//   - many
+//   - other
+//   - formatted - formatted="true" for android
+//   - number - for arrays
+// example:
+// app_extension_name.ios-only
+// items_count.zero
+// items_count.two
+// items_names.0
 
 class Locale {
 
@@ -96,7 +116,7 @@ function checkFormatAndGetLocales(row) {
   let commentFound = false;
   let localeFound = false;
 
-  for (let key of Object.keys(row)) {
+  for (let key of (0, _keys2.default)(row)) {
     switch (key) {
       case 'key':
         keyFound = true;
@@ -128,8 +148,8 @@ function checkFormatAndGetLocales(row) {
 }
 
 function enumerateLocaleValuesInRow(locales, row, callback) {
-  for (let _ref of Object.entries(row)) {
-    var _ref2 = _slicedToArray(_ref, 2);
+  for (let _ref of (0, _entries2.default)(row)) {
+    var _ref2 = (0, _slicedToArray3.default)(_ref, 2);
 
     let col = _ref2[0];
     let raw = _ref2[1];
@@ -215,7 +235,7 @@ function parseRow(locales, row) {
 
 function localeToAndroidFormat(locale) {
   let resources = [];
-  let keys = Object.keys(locale.strings);
+  let keys = (0, _keys2.default)(locale.strings);
   keys.sort();
   for (let key of keys) {
     let value = locale.strings[key];
@@ -229,7 +249,7 @@ function localeToAndroidFormat(locale) {
     resources.push(str);
   }
 
-  keys = Object.keys(locale.arrays);
+  keys = (0, _keys2.default)(locale.arrays);
   keys.sort();
   for (let key of keys) {
     let value = locale.arrays[key];
@@ -242,7 +262,7 @@ function localeToAndroidFormat(locale) {
     resources.push(arr);
   }
 
-  keys = Object.keys(locale.plurals);
+  keys = (0, _keys2.default)(locale.plurals);
   keys.sort();
   for (let key of keys) {
     let value = locale.plurals[key];
@@ -273,7 +293,7 @@ function snakeToCamel(s) {
 
 function localeToIOSStrings(locale) {
   let resources = [];
-  let keys = Object.keys(locale.strings);
+  let keys = (0, _keys2.default)(locale.strings);
   keys.sort();
   for (let key of keys) {
     let value = locale.strings[key];
@@ -283,14 +303,14 @@ function localeToIOSStrings(locale) {
     if (value.meta.comment != null) {
       resources.push(`/* ${ value.meta.comment } */`);
     }
-    let str = JSON.stringify(snakeToCamel(key)) + " = " + JSON.stringify(value.value) + ";";
+    let str = (0, _stringify2.default)(snakeToCamel(key)) + " = " + (0, _stringify2.default)(value.value) + ";";
     resources.push(str);
   }
 
   return resources.join("\n");
 }
 
-_asyncToGenerator(function* () {
+(0, _asyncToGenerator3.default)(function* () {
 
   try {
 
