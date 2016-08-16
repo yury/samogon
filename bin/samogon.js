@@ -342,7 +342,7 @@ function localeToIOSStrings(locale) {
 
     let lang = "en";
 
-    if (parsed.lang == null) {
+    if (parsed.lang != null) {
       lang = parsed.lang;
     }
 
