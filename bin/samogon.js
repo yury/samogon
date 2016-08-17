@@ -303,7 +303,8 @@ function localeToIOSStrings(locale) {
     if (value.meta.comment != null) {
       resources.push(`/* ${ value.meta.comment } */`);
     }
-    let str = (0, _stringify2.default)(snakeToCamel(key)) + " = " + (0, _stringify2.default)(value.value) + ";";
+    let s = value.value.replace(/%s/g, '%@');
+    let str = (0, _stringify2.default)(snakeToCamel(key)) + " = " + (0, _stringify2.default)(s) + ";";
     resources.push(str);
   }
 
