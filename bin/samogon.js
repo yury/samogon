@@ -195,10 +195,15 @@ function parseRow(locales, row) {
   let meta = {
     iosOnly: keyParts.indexOf('ios-only') >= 0,
     androidOnly: keyParts.indexOf('android-only') >= 0,
-    formatted: keyParts.indexOf('formatted') >= 0,
+    formatted: null,
     comment
   };
 
+  if (keyParts.indexOf('formatted') >= 0) {
+    meta.formatted = true;
+  } else if (keyParts.indexOf('unformatted') >= 0) {
+    meta.formatted = false;
+  }
   let index = keyParts[0];
   let arrayIndex = parseInt(index);
 
@@ -242,10 +247,15 @@ function localeToAndroidFormat(locale) {
     if (value.meta.iosOnly) {
       continue;
     }
-    let str = { string: [{ _attr: { name: key } }, value.value] };
-    if (value.formatted) {
-      str[0]._attr.formatted = true;
+
+    let attrs = { name: key };
+
+    if (value.meta.formatted != null) {
+      attrs.formatted = value.meta.formatted;
     }
+
+    let str = { string: [{ _attr: attrs }, value.value] };
+
     resources.push(str);
   }
 
