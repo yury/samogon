@@ -321,12 +321,66 @@ function localeToIOSStrings(locale) {
   return resources.join("\n");
 }
 
+function swiftFuncArgs(value) {
+  let matches = value.value.match(/%[d|s]/g) || [];
+  return matches.map(v => {
+    if (v === "%s") {
+      return "String";
+    } else if (v === "%d") {
+      return "AnyObject";
+    } else {
+      return "AnyObject";
+    }
+  });
+}
+
+function swiftFunc(value) {
+  let resName = snakeToCamel(value.key);
+  let args = swiftFuncArgs(value);
+
+  let swiftSignature = args.map((v, i) => `v${ i }: ${ v }`).join(', ');
+  let swiftCall = args.map((v, i) => `v${ i }`).join(', ');
+
+  let func = `    public static func ${ resName }(${ swiftSignature }) -> String {\n        return R.string.localized.${ resName }(${ swiftCall })\n    }`;
+  return func;
+}
+
+function localeToIOSRObjCStrings(locale) {
+  let pre = `
+// RS.swift
+
+import Foundation
+
+public class RS: NSObject {
+  `;
+
+  let post = "}";
+
+  let resources = [pre];
+  let keys = (0, _keys2.default)(locale.strings);
+  keys.sort();
+  for (let key of keys) {
+    let value = locale.strings[key];
+    if (value.meta.androidOnly) {
+      continue;
+    }
+    if (value.meta.comment != null) {
+      resources.push(`/* ${ value.meta.comment } */`);
+    }
+    resources.push(swiftFunc(value));
+  }
+
+  resources.push(post);
+
+  return resources.join("\n");
+}
+
 (0, _asyncToGenerator3.default)(function* () {
 
   try {
 
     let knownOpts = {
-      format: ["android", "apple"],
+      format: ["android", "apple", "apple-r-objc"],
       lang: String,
       csv: _path2.default
     };
@@ -359,8 +413,10 @@ function localeToIOSStrings(locale) {
 
     if (parsed.format === "apple") {
       console.log(localeToIOSStrings(locales[lang]));
-    } else {
+    } else if (parsed.format === "android") {
       console.log(localeToAndroidFormat(locales[lang]));
+    } else if (parsed.format === "apple-r-objc") {
+      console.log(localeToIOSRObjCStrings(locales[lang]));
     }
   } catch (e) {
     console.error(e);
