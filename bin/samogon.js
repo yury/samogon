@@ -195,6 +195,7 @@ function parseRow(locales, row) {
   let meta = {
     iosOnly: keyParts.indexOf('ios-only') >= 0,
     androidOnly: keyParts.indexOf('android-only') >= 0,
+    enKey: keyParts.indexOf('en-key') >= 0,
     formatted: null,
     comment
   };
@@ -301,7 +302,7 @@ function snakeToCamel(s) {
   });
 }
 
-function localeToIOSStrings(locale) {
+function localeToIOSStrings(locale, enLocale) {
   let resources = [];
   let keys = (0, _keys2.default)(locale.strings);
   keys.sort();
@@ -315,6 +316,9 @@ function localeToIOSStrings(locale) {
     }
     let s = value.value.replace(/%s/g, '%@');
     let str = (0, _stringify2.default)(snakeToCamel(key)) + " = " + (0, _stringify2.default)(s) + ";";
+    if (value.meta.enKey) {
+      str = (0, _stringify2.default)(enLocale.strings[key].value) + " = " + (0, _stringify2.default)(s) + ";";
+    }
     resources.push(str);
   }
 
@@ -341,7 +345,7 @@ function swiftFunc(value) {
   let swiftSignature = args.map((v, i) => `v${ i }: ${ v }`).join(', ');
   let swiftCall = args.map((v, i) => `v${ i }`).join(', ');
 
-  let func = `    public static func ${ resName }(${ swiftSignature }) -> String {\n        return R.string.localized.${ resName }(${ swiftCall })\n    }`;
+  let func = `    public static func ${ resName }(${ swiftSignature }) -> String {\n        return R.string.localizable.${ resName }(${ swiftCall })\n    }`;
   return func;
 }
 
@@ -361,7 +365,7 @@ public class RS: NSObject {
   keys.sort();
   for (let key of keys) {
     let value = locale.strings[key];
-    if (value.meta.androidOnly) {
+    if (value.meta.androidOnly || value.meta.enKey) {
       continue;
     }
     if (value.meta.comment != null) {
@@ -412,11 +416,11 @@ public class RS: NSObject {
     }
 
     if (parsed.format === "apple") {
-      console.log(localeToIOSStrings(locales[lang]));
+      console.log(localeToIOSStrings(locales[lang], locales.en));
     } else if (parsed.format === "android") {
       console.log(localeToAndroidFormat(locales[lang]));
     } else if (parsed.format === "apple-r-objc") {
-      console.log(localeToIOSRObjCStrings(locales[lang]));
+      console.log(localeToIOSRObjCStrings(locales[lang], locales.en));
     }
   } catch (e) {
     console.error(e);
