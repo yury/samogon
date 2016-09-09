@@ -207,6 +207,7 @@ function parseRow(locales, row) {
     androidOnly: keyParts.indexOf('android-only') >= 0,
     enKey: keyParts.indexOf('en-key') >= 0,
     formatted: null,
+    integer: keyParts.indexOf('int') >= 0 || keyParts.indexOf('integer') >= 0,
     comment
   };
 
@@ -278,7 +279,8 @@ function localeToAndroidFormat(locale) {
     if (value.meta.iosOnly) {
       continue;
     }
-    let arr = { 'string-array': [{ _attr: { name: key } }].concat(value.values.map(v => {
+    let type = value.meta.integer ? 'integer-array' : 'string-array';
+    let arr = { [type]: [{ _attr: { name: key } }].concat(value.values.map(v => {
         return { item: [v] };
       })) };
     resources.push(arr);
