@@ -179,6 +179,16 @@ function enumerateLocaleValuesInRow(locales, row, callback) {
   }
 }
 
+function formatter(keyParts) {
+  for (var part of keyParts) {
+    if (part[0] == '%') {
+      return part;
+    }
+  }
+
+  return '%d';
+}
+
 function parseRow(locales, row) {
   let keyWithAttributes = "";
   if (row.key != null) {
@@ -212,11 +222,12 @@ function parseRow(locales, row) {
     let pluralIndex = PLURALS.indexOf(index);
     if (pluralIndex >= 0) {
       let qty = PLURALS[pluralIndex];
+      let frmt = formatter(keyParts);
       enumerateLocaleValuesInRow(locales, row, (locale, value) => {
         let res = locale.plurals[key];
 
         if (res == null) {
-          res = { meta, key, zero: null, one: null, two: null, few: null, many: null, other: null };
+          res = { meta, key, zero: null, one: null, two: null, few: null, many: null, other: null, formatter: frmt, value: key + " " + frmt };
         }
         res[qty] = value;
         locale.plurals[key] = res;
@@ -302,7 +313,7 @@ function snakeToCamel(s) {
   });
 }
 
-function localeToIOSStrings(locale, enLocale) {
+function localeToAppleStrings(locale, enLocale) {
   let resources = [];
   let keys = (0, _keys2.default)(locale.strings);
   keys.sort();
@@ -322,16 +333,67 @@ function localeToIOSStrings(locale, enLocale) {
     resources.push(str);
   }
 
+  keys = (0, _keys2.default)(locale.plurals);
+  keys.sort();
+  for (let key of keys) {
+    let value = locale.plurals[key];
+    if (value.meta.androidOnly) {
+      continue;
+    }
+    if (value.meta.comment != null) {
+      resources.push(`/* ${ value.meta.comment } */`);
+    }
+    let str = (0, _stringify2.default)(snakeToCamel(key)) + " = " + (0, _stringify2.default)(value.value) + ";";
+
+    resources.push(str);
+  }
+
   return resources.join("\n");
 }
 
+function localeToAppleStringsDict(locale, enLocale) {
+  let resources = [];
+  let keys = (0, _keys2.default)(locale.plurals);
+  keys.sort();
+  let dict = [];
+  let plist = [{ _attr: { version: "1.0" } }, { dict: dict }];
+  for (let key of keys) {
+    let value = locale.plurals[key];
+    if (value.meta.androidOnly) {
+      continue;
+    }
+
+    dict.push({ key: snakeToCamel(key) });
+    let plural = [];
+    dict.push({ dict: plural });
+    plural.push({ key: 'NSStringLocalizedFormatKey' });
+    plural.push({ string: '%#@value@' });
+    plural.push({ key: 'value' });
+    let plurals = [{ key: 'NSStringFormatSpecTypeKey' }, { string: 'NSStringPluralRuleType' }, { key: 'NSStringFormatValueTypeKey' }, { string: value.formatter.replace(/%/, '') }];
+    plural.push({ dict: plurals });
+
+    for (let qty of PLURALS) {
+      if (value[qty] != null) {
+        plurals.push({ key: qty });
+        let s = value[qty].replace(/%[sfdg]/g, value.formatter);
+        plurals.push({ string: s });
+      };
+    }
+
+    resources.push(plural);
+  }
+  return (0, _xml2.default)([{ plist: plist }], { declaration: true, indent: '    ' });
+}
+
 function swiftFuncArgs(value) {
-  let matches = value.value.match(/%[d|s]/g) || [];
+  let matches = value.value.match(/%[d|s|f]/g) || [];
   return matches.map(v => {
     if (v === "%s") {
       return "String";
     } else if (v === "%d") {
-      return "AnyObject";
+      return "Int";
+    } else if (v === "%f") {
+      return "Float";
     } else {
       return "AnyObject";
     }
@@ -345,11 +407,20 @@ function swiftFunc(value) {
   let swiftSignature = args.map((v, i) => `v${ i }: ${ v }`).join(', ');
   let swiftCall = args.map((v, i) => `v${ i }`).join(', ');
 
-  let func = `    public static func ${ resName }(${ swiftSignature }) -> String {\n        return R.string.localizable.${ resName }(${ swiftCall })\n    }`;
-  return func;
+  if (value.formatter != null) {
+    return `
+  public static func ${ resName }(${ swiftSignature }) -> String {
+      return String.localizedStringWithFormat(NSLocalizedString("${ resName }", comment: "${ value.key }"), ${ swiftCall })
+  }`;
+  }
+
+  return `
+  public static func ${ resName }(${ swiftSignature }) -> String {
+      return R.string.localizable.${ resName }(${ swiftCall })
+  }`;
 }
 
-function localeToIOSRObjCStrings(locale) {
+function localeToAppleRObjC(locale) {
   let pre = `
 // RS.swift
 
@@ -374,6 +445,19 @@ public class RS: NSObject {
     resources.push(swiftFunc(value));
   }
 
+  keys = (0, _keys2.default)(locale.plurals);
+  keys.sort();
+  for (let key of keys) {
+    let value = locale.plurals[key];
+    if (value.meta.androidOnly || value.meta.enKey) {
+      continue;
+    }
+    if (value.meta.comment != null) {
+      resources.push(`/* ${ value.meta.comment } */`);
+    }
+    resources.push(swiftFunc(value));
+  }
+
   resources.push(post);
 
   return resources.join("\n");
@@ -384,7 +468,7 @@ public class RS: NSObject {
   try {
 
     let knownOpts = {
-      format: ["android", "apple", "apple-r-objc"],
+      format: ["android", "apple", "apple-r-objc", "apple-dict"],
       lang: String,
       csv: _path2.default
     };
@@ -416,11 +500,13 @@ public class RS: NSObject {
     }
 
     if (parsed.format === "apple") {
-      console.log(localeToIOSStrings(locales[lang], locales.en));
+      console.log(localeToAppleStrings(locales[lang], locales.en));
     } else if (parsed.format === "android") {
       console.log(localeToAndroidFormat(locales[lang]));
     } else if (parsed.format === "apple-r-objc") {
-      console.log(localeToIOSRObjCStrings(locales[lang], locales.en));
+      console.log(localeToAppleRObjC(locales[lang], locales.en));
+    } else if (parsed.format === "apple-dict") {
+      console.log(localeToAppleStringsDict(locales[lang], locales.en));
     }
   } catch (e) {
     console.error(e);
