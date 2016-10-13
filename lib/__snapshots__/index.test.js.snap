@@ -1,0 +1,41 @@
+exports[`test localeToAndroidFormat 1`] = `
+"<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<resources>
+    <string name=\"key1\">value1</string>
+    <string name=\"key3\">value3</string>
+</resources>"
+`;
+
+exports[`test localeToAppleRObjC 1`] = `
+"
+// RS.swift
+
+import Foundation
+
+public class RS: NSObject {
+  
+  public static func key1() -> String {
+      return R.string.localizable.key1()
+  }
+/* comment */
+
+  public static func key3() -> String {
+      return R.string.localizable.key3()
+  }
+}
+"
+`;
+
+exports[`test localeToAppleStrings 1`] = `
+"\"key1\" = \"value1\";
+/* comment */
+\"key3\" = \"value3\";"
+`;
+
+exports[`test localeToAppleStringsDict 1`] = `
+"<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<plist version=\"1.0\">
+    <dict>
+    </dict>
+</plist>"
+`;
