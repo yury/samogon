@@ -4,7 +4,7 @@
   "description": "iOS/Mac OS/Android resource strings generator.",
   "main": "index.js",
   "scripts": {
-    "build": "babel lib -o bin/samogon.js && ex -sc '1i|#!/usr/bin/env node' -cx bin/samogon.js",
+    "build": "webpack && ex -sc '1i|#!/usr/bin/env node' -cx bin/samogon.js",
     "flow": "flow; test $? -eq 0 -o $? -eq 2",
     "test": "jest"
   },
@@ -33,9 +33,11 @@
   "devDependencies": {
     "babel-cli": "^6.11.4",
     "babel-jest": "^16.0.0",
+    "babel-loader": "^6.2.5",
     "babel-polyfill": "^6.16.0",
     "babel-preset-latest": "^6.16.0",
     "flow-bin": "^0.33.0",
-    "jest": "^16.0.1"
+    "jest": "^16.0.1",
+    "webpack": "^1.13.2"
   }
 }
