@@ -3594,6 +3594,9 @@
 	      var _key8 = _step13.value;
 
 	      var _value8 = locale.strings[_key8];
+	      if (_value8.meta.enKey) {
+	        continue;
+	      }
 	      if (_value8.meta.comment != null) {
 	        resources.push('/* ' + _value8.meta.comment + ' */');
 	      }
