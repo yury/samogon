@@ -2995,6 +2995,7 @@
 	//   - many
 	//   - other
 	//   - formatted - formatted="true" for android
+	//   - unformatted - formatted="false" for android
 	//   - number - for arrays
 	// example:
 	// items_count.zero
@@ -3019,6 +3020,7 @@
 	  var keyFound = false;
 	  var commentFound = false;
 	  var localeFound = false;
+	  var tagsFound = false;
 
 	  var _iteratorNormalCompletion = true;
 	  var _didIteratorError = false;
@@ -3035,6 +3037,7 @@
 	          commentFound = true;
 	          break;
 	        case 'tags':
+	          tagsFound = true;
 	          break;
 	        default:
 	          localeFound = true;
@@ -3066,6 +3069,10 @@
 	    throw new Error("csv MUST contain `comment` column");
 	  }
 
+	  if (!tagsFound) {
+	    throw new Error("csv MUST contain `tags` column");
+	  }
+
 	  if (!localeFound) {
 	    throw new Error("csv MUST contain at least one locale column. (`en`, `ru`)");
 	  }
@@ -3095,8 +3102,8 @@
 	        continue;
 	      }
 
-	      var _value = "";
-	      if (typeof raw == "string") {
+	      var _value = '';
+	      if (typeof raw == 'string') {
 	        _value = raw;
 	      } else {
 	        _value = String(raw);
@@ -3237,7 +3244,18 @@
 	          var res = locale.plurals[key];
 
 	          if (res == null) {
-	            res = { meta: meta, key: key, zero: null, one: null, two: null, few: null, many: null, other: null, formatter: frmt, value: key + " " + frmt };
+	            res = {
+	              meta: meta,
+	              key: key,
+	              zero: null,
+	              one: null,
+	              two: null,
+	              few: null,
+	              many: null,
+	              other: null,
+	              formatter: frmt,
+	              value: key + " " + frmt
+	            };
 	          }
 	          res[qty] = value;
 	          locale.plurals[key] = res;
