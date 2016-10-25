@@ -2971,13 +2971,13 @@
 
 	var _sync2 = _interopRequireDefault(_sync);
 
-	var _xml = __webpack_require__(104);
-
-	var _xml2 = _interopRequireDefault(_xml);
-
-	var _querytext = __webpack_require__(106);
+	var _querytext = __webpack_require__(104);
 
 	var _querytext2 = _interopRequireDefault(_querytext);
+
+	var _xml = __webpack_require__(123);
+
+	var _xml2 = _interopRequireDefault(_xml);
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -4572,325 +4572,13 @@
 /* 104 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var escapeForXML = __webpack_require__(105);
-	var Stream = __webpack_require__(73).Stream;
-
-	var DEFAULT_INDENT = '    ';
-
-	function xml(input, options) {
-
-	    if (typeof options !== 'object') {
-	        options = {
-	            indent: options
-	        };
-	    }
-
-	    var stream      = options.stream ? new Stream() : null,
-	        output      = "",
-	        interrupted = false,
-	        indent      = !options.indent ? ''
-	                        : options.indent === true ? DEFAULT_INDENT
-	                            : options.indent,
-	        instant     = true;
-
-
-	    function delay (func) {
-	        if (!instant) {
-	            func();
-	        } else {
-	            process.nextTick(func);
-	        }
-	    }
-
-	    function append (interrupt, out) {
-	        if (out !== undefined) {
-	            output += out;
-	        }
-	        if (interrupt && !interrupted) {
-	            stream = stream || new Stream();
-	            interrupted = true;
-	        }
-	        if (interrupt && interrupted) {
-	            var data = output;
-	            delay(function () { stream.emit('data', data) });
-	            output = "";
-	        }
-	    }
-
-	    function add (value, last) {
-	        format(append, resolve(value, indent, indent ? 1 : 0), last);
-	    }
-
-	    function end() {
-	        if (stream) {
-	            var data = output;
-	            delay(function () {
-	              stream.emit('data', data);
-	              stream.emit('end');
-	              stream.readable = false;
-	              stream.emit('close');
-	            });
-	        }
-	    }
-
-	    function addXmlDeclaration(declaration) {
-	        var encoding = declaration.encoding || 'UTF-8',
-	            attr =  { version: '1.0', encoding: encoding };
-
-	        if (declaration.standalone) {
-	            attr.standalone = declaration.standalone
-	        }
-
-	        add({'?xml': { _attr: attr } });
-	        output = output.replace('/>', '?>');
-	    }
-
-	    // disable delay delayed
-	    delay(function () { instant = false });
-
-	    if (options.declaration) {
-	        addXmlDeclaration(options.declaration);
-	    }
-
-	    if (input && input.forEach) {
-	        input.forEach(function (value, i) {
-	            var last;
-	            if (i + 1 === input.length)
-	                last = end;
-	            add(value, last);
-	        });
-	    } else {
-	        add(input, end);
-	    }
-
-	    if (stream) {
-	        stream.readable = true;
-	        return stream;
-	    }
-	    return output;
-	}
-
-	function element (/*input, …*/) {
-	    var input = Array.prototype.slice.call(arguments),
-	        self = {
-	            _elem:  resolve(input)
-	        };
-
-	    self.push = function (input) {
-	        if (!this.append) {
-	            throw new Error("not assigned to a parent!");
-	        }
-	        var that = this;
-	        var indent = this._elem.indent;
-	        format(this.append, resolve(
-	            input, indent, this._elem.icount + (indent ? 1 : 0)),
-	            function () { that.append(true) });
-	    };
-
-	    self.close = function (input) {
-	        if (input !== undefined) {
-	            this.push(input);
-	        }
-	        if (this.end) {
-	            this.end();
-	        }
-	    };
-
-	    return self;
-	}
-
-	function create_indent(character, count) {
-	    return (new Array(count || 0).join(character || ''))
-	}
-
-	function resolve(data, indent, indent_count) {
-	    indent_count = indent_count || 0;
-	    var indent_spaces = create_indent(indent, indent_count);
-	    var name;
-	    var values = data;
-	    var interrupt = false;
-
-	    if (typeof data === 'object') {
-	        var keys = Object.keys(data);
-	        name = keys[0];
-	        values = data[name];
-
-	        if (values && values._elem) {
-	            values._elem.name = name;
-	            values._elem.icount = indent_count;
-	            values._elem.indent = indent;
-	            values._elem.indents = indent_spaces;
-	            values._elem.interrupt = values;
-	            return values._elem;
-	        }
-	    }
-
-	    var attributes = [],
-	        content = [];
-
-	    var isStringContent;
-
-	    function get_attributes(obj){
-	        var keys = Object.keys(obj);
-	        keys.forEach(function(key){
-	            attributes.push(attribute(key, obj[key]));
-	        });
-	    }
-
-	    switch(typeof values) {
-	        case 'object':
-	            if (values === null) break;
-
-	            if (values._attr) {
-	                get_attributes(values._attr);
-	            }
-
-	            if (values._cdata) {
-	                content.push(
-	                    ('<![CDATA[' + values._cdata).replace(/\]\]>/g, ']]]]><![CDATA[>') + ']]>'
-	                );
-	            }
-
-	            if (values.forEach) {
-	                isStringContent = false;
-	                content.push('');
-	                values.forEach(function(value) {
-	                    if (typeof value == 'object') {
-	                        var _name = Object.keys(value)[0];
-
-	                        if (_name == '_attr') {
-	                            get_attributes(value._attr);
-	                        } else {
-	                            content.push(resolve(
-	                                value, indent, indent_count + 1));
-	                        }
-	                    } else {
-	                        //string
-	                        content.pop();
-	                        isStringContent=true;
-	                        content.push(escapeForXML(value));
-	                    }
-
-	                });
-	                if (!isStringContent) {
-	                    content.push('');
-	                }
-	            }
-	        break;
-
-	        default:
-	            //string
-	            content.push(escapeForXML(values));
-
-	    }
-
-	    return {
-	        name:       name,
-	        interrupt:  interrupt,
-	        attributes: attributes,
-	        content:    content,
-	        icount:     indent_count,
-	        indents:    indent_spaces,
-	        indent:     indent
-	    };
-	}
-
-	function format(append, elem, end) {
-
-	    if (typeof elem != 'object') {
-	        return append(false, elem);
-	    }
-
-	    var len = elem.interrupt ? 1 : elem.content.length;
-
-	    function proceed () {
-	        while (elem.content.length) {
-	            var value = elem.content.shift();
-
-	            if (value === undefined) continue;
-	            if (interrupt(value)) return;
-
-	            format(append, value);
-	        }
-
-	        append(false, (len > 1 ? elem.indents : '')
-	            + (elem.name ? '</' + elem.name + '>' : '')
-	            + (elem.indent && !end ? '\n' : ''));
-
-	        if (end) {
-	            end();
-	        }
-	    }
-
-	    function interrupt(value) {
-	       if (value.interrupt) {
-	           value.interrupt.append = append;
-	           value.interrupt.end = proceed;
-	           value.interrupt = false;
-	           append(true);
-	           return true;
-	       }
-	       return false;
-	    }
-
-	    append(false, elem.indents
-	        + (elem.name ? '<' + elem.name : '')
-	        + (elem.attributes.length ? ' ' + elem.attributes.join(' ') : '')
-	        + (len ? (elem.name ? '>' : '') : (elem.name ? '/>' : ''))
-	        + (elem.indent && len > 1 ? '\n' : ''));
-
-	    if (!len) {
-	        return append(false, elem.indent ? '\n' : '');
-	    }
-
-	    if (!interrupt(elem)) {
-	        proceed();
-	    }
-	}
-
-	function attribute(key, value) {
-	    return key + '=' + '"' + escapeForXML(value) + '"';
-	}
-
-	module.exports = xml;
-	module.exports.element = module.exports.Element = element;
-
-
-/***/ },
-/* 105 */
-/***/ function(module, exports) {
-
-	
-	var XML_CHARACTER_MAP = {
-	    '&': '&amp;',
-	    '"': '&quot;',
-	    "'": '&apos;',
-	    '<': '&lt;',
-	    '>': '&gt;'
-	};
-
-	function escapeForXML(string) {
-	    return string && string.replace
-	        ? string.replace(/([&"<>'])/g, function(str, item) {
-	            return XML_CHARACTER_MAP[item];
-	          })
-	        : string;
-	}
-
-	module.exports = escapeForXML;
-
-
-/***/ },
-/* 106 */
-/***/ function(module, exports, __webpack_require__) {
-
 	'use strict';
 
 	Object.defineProperty(exports, "__esModule", {
 		value: true
 	});
 
-	var _typeof2 = __webpack_require__(107);
+	var _typeof2 = __webpack_require__(105);
 
 	var _typeof3 = _interopRequireDefault(_typeof2);
 
@@ -5462,18 +5150,18 @@
 	exports.default = querytext;
 
 /***/ },
-/* 107 */
+/* 105 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 
 	exports.__esModule = true;
 
-	var _iterator = __webpack_require__(108);
+	var _iterator = __webpack_require__(106);
 
 	var _iterator2 = _interopRequireDefault(_iterator);
 
-	var _symbol = __webpack_require__(111);
+	var _symbol = __webpack_require__(109);
 
 	var _symbol2 = _interopRequireDefault(_symbol);
 
@@ -5488,43 +5176,43 @@
 	};
 
 /***/ },
-/* 108 */
+/* 106 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = { "default": __webpack_require__(109), __esModule: true };
+	module.exports = { "default": __webpack_require__(107), __esModule: true };
 
 /***/ },
-/* 109 */
+/* 107 */
 /***/ function(module, exports, __webpack_require__) {
 
 	__webpack_require__(7);
 	__webpack_require__(51);
-	module.exports = __webpack_require__(110).f('iterator');
+	module.exports = __webpack_require__(108).f('iterator');
 
 /***/ },
-/* 110 */
+/* 108 */
 /***/ function(module, exports, __webpack_require__) {
 
 	exports.f = __webpack_require__(48);
 
 /***/ },
-/* 111 */
+/* 109 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = { "default": __webpack_require__(112), __esModule: true };
+	module.exports = { "default": __webpack_require__(110), __esModule: true };
 
 /***/ },
-/* 112 */
+/* 110 */
 /***/ function(module, exports, __webpack_require__) {
 
-	__webpack_require__(113);
+	__webpack_require__(111);
 	__webpack_require__(6);
-	__webpack_require__(123);
-	__webpack_require__(124);
+	__webpack_require__(121);
+	__webpack_require__(122);
 	module.exports = __webpack_require__(15).Symbol;
 
 /***/ },
-/* 113 */
+/* 111 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -5534,24 +5222,24 @@
 	  , DESCRIPTORS    = __webpack_require__(23)
 	  , $export        = __webpack_require__(13)
 	  , redefine       = __webpack_require__(28)
-	  , META           = __webpack_require__(114).KEY
+	  , META           = __webpack_require__(112).KEY
 	  , $fails         = __webpack_require__(24)
 	  , shared         = __webpack_require__(43)
 	  , setToStringTag = __webpack_require__(47)
 	  , uid            = __webpack_require__(44)
 	  , wks            = __webpack_require__(48)
-	  , wksExt         = __webpack_require__(110)
-	  , wksDefine      = __webpack_require__(115)
-	  , keyOf          = __webpack_require__(116)
-	  , enumKeys       = __webpack_require__(117)
-	  , isArray        = __webpack_require__(119)
+	  , wksExt         = __webpack_require__(108)
+	  , wksDefine      = __webpack_require__(113)
+	  , keyOf          = __webpack_require__(114)
+	  , enumKeys       = __webpack_require__(115)
+	  , isArray        = __webpack_require__(117)
 	  , anObject       = __webpack_require__(20)
 	  , toIObject      = __webpack_require__(36)
 	  , toPrimitive    = __webpack_require__(26)
 	  , createDesc     = __webpack_require__(27)
 	  , _create        = __webpack_require__(32)
-	  , gOPNExt        = __webpack_require__(120)
-	  , $GOPD          = __webpack_require__(122)
+	  , gOPNExt        = __webpack_require__(118)
+	  , $GOPD          = __webpack_require__(120)
 	  , $DP            = __webpack_require__(19)
 	  , $keys          = __webpack_require__(34)
 	  , gOPD           = $GOPD.f
@@ -5676,9 +5364,9 @@
 
 	  $GOPD.f = $getOwnPropertyDescriptor;
 	  $DP.f   = $defineProperty;
-	  __webpack_require__(121).f = gOPNExt.f = $getOwnPropertyNames;
+	  __webpack_require__(119).f = gOPNExt.f = $getOwnPropertyNames;
 	  __webpack_require__(94).f  = $propertyIsEnumerable;
-	  __webpack_require__(118).f = $getOwnPropertySymbols;
+	  __webpack_require__(116).f = $getOwnPropertySymbols;
 
 	  if(DESCRIPTORS && !__webpack_require__(12)){
 	    redefine(ObjectProto, 'propertyIsEnumerable', $propertyIsEnumerable, true);
@@ -5764,7 +5452,7 @@
 	setToStringTag(global.JSON, 'JSON', true);
 
 /***/ },
-/* 114 */
+/* 112 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var META     = __webpack_require__(44)('meta')
@@ -5822,13 +5510,13 @@
 	};
 
 /***/ },
-/* 115 */
+/* 113 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var global         = __webpack_require__(14)
 	  , core           = __webpack_require__(15)
 	  , LIBRARY        = __webpack_require__(12)
-	  , wksExt         = __webpack_require__(110)
+	  , wksExt         = __webpack_require__(108)
 	  , defineProperty = __webpack_require__(19).f;
 	module.exports = function(name){
 	  var $Symbol = core.Symbol || (core.Symbol = LIBRARY ? {} : global.Symbol || {});
@@ -5836,7 +5524,7 @@
 	};
 
 /***/ },
-/* 116 */
+/* 114 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var getKeys   = __webpack_require__(34)
@@ -5851,12 +5539,12 @@
 	};
 
 /***/ },
-/* 117 */
+/* 115 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// all enumerable object keys, includes symbols
 	var getKeys = __webpack_require__(34)
-	  , gOPS    = __webpack_require__(118)
+	  , gOPS    = __webpack_require__(116)
 	  , pIE     = __webpack_require__(94);
 	module.exports = function(it){
 	  var result     = getKeys(it)
@@ -5871,13 +5559,13 @@
 	};
 
 /***/ },
-/* 118 */
+/* 116 */
 /***/ function(module, exports) {
 
 	exports.f = Object.getOwnPropertySymbols;
 
 /***/ },
-/* 119 */
+/* 117 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// 7.2.2 IsArray(argument)
@@ -5887,12 +5575,12 @@
 	};
 
 /***/ },
-/* 120 */
+/* 118 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// fallback for IE11 buggy Object.getOwnPropertyNames with iframe and window
 	var toIObject = __webpack_require__(36)
-	  , gOPN      = __webpack_require__(121).f
+	  , gOPN      = __webpack_require__(119).f
 	  , toString  = {}.toString;
 
 	var windowNames = typeof window == 'object' && window && Object.getOwnPropertyNames
@@ -5912,7 +5600,7 @@
 
 
 /***/ },
-/* 121 */
+/* 119 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// 19.1.2.7 / 15.2.3.4 Object.getOwnPropertyNames(O)
@@ -5924,7 +5612,7 @@
 	};
 
 /***/ },
-/* 122 */
+/* 120 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var pIE            = __webpack_require__(94)
@@ -5945,16 +5633,328 @@
 	};
 
 /***/ },
+/* 121 */
+/***/ function(module, exports, __webpack_require__) {
+
+	__webpack_require__(113)('asyncIterator');
+
+/***/ },
+/* 122 */
+/***/ function(module, exports, __webpack_require__) {
+
+	__webpack_require__(113)('observable');
+
+/***/ },
 /* 123 */
 /***/ function(module, exports, __webpack_require__) {
 
-	__webpack_require__(115)('asyncIterator');
+	var escapeForXML = __webpack_require__(124);
+	var Stream = __webpack_require__(73).Stream;
+
+	var DEFAULT_INDENT = '    ';
+
+	function xml(input, options) {
+
+	    if (typeof options !== 'object') {
+	        options = {
+	            indent: options
+	        };
+	    }
+
+	    var stream      = options.stream ? new Stream() : null,
+	        output      = "",
+	        interrupted = false,
+	        indent      = !options.indent ? ''
+	                        : options.indent === true ? DEFAULT_INDENT
+	                            : options.indent,
+	        instant     = true;
+
+
+	    function delay (func) {
+	        if (!instant) {
+	            func();
+	        } else {
+	            process.nextTick(func);
+	        }
+	    }
+
+	    function append (interrupt, out) {
+	        if (out !== undefined) {
+	            output += out;
+	        }
+	        if (interrupt && !interrupted) {
+	            stream = stream || new Stream();
+	            interrupted = true;
+	        }
+	        if (interrupt && interrupted) {
+	            var data = output;
+	            delay(function () { stream.emit('data', data) });
+	            output = "";
+	        }
+	    }
+
+	    function add (value, last) {
+	        format(append, resolve(value, indent, indent ? 1 : 0), last);
+	    }
+
+	    function end() {
+	        if (stream) {
+	            var data = output;
+	            delay(function () {
+	              stream.emit('data', data);
+	              stream.emit('end');
+	              stream.readable = false;
+	              stream.emit('close');
+	            });
+	        }
+	    }
+
+	    function addXmlDeclaration(declaration) {
+	        var encoding = declaration.encoding || 'UTF-8',
+	            attr =  { version: '1.0', encoding: encoding };
+
+	        if (declaration.standalone) {
+	            attr.standalone = declaration.standalone
+	        }
+
+	        add({'?xml': { _attr: attr } });
+	        output = output.replace('/>', '?>');
+	    }
+
+	    // disable delay delayed
+	    delay(function () { instant = false });
+
+	    if (options.declaration) {
+	        addXmlDeclaration(options.declaration);
+	    }
+
+	    if (input && input.forEach) {
+	        input.forEach(function (value, i) {
+	            var last;
+	            if (i + 1 === input.length)
+	                last = end;
+	            add(value, last);
+	        });
+	    } else {
+	        add(input, end);
+	    }
+
+	    if (stream) {
+	        stream.readable = true;
+	        return stream;
+	    }
+	    return output;
+	}
+
+	function element (/*input, …*/) {
+	    var input = Array.prototype.slice.call(arguments),
+	        self = {
+	            _elem:  resolve(input)
+	        };
+
+	    self.push = function (input) {
+	        if (!this.append) {
+	            throw new Error("not assigned to a parent!");
+	        }
+	        var that = this;
+	        var indent = this._elem.indent;
+	        format(this.append, resolve(
+	            input, indent, this._elem.icount + (indent ? 1 : 0)),
+	            function () { that.append(true) });
+	    };
+
+	    self.close = function (input) {
+	        if (input !== undefined) {
+	            this.push(input);
+	        }
+	        if (this.end) {
+	            this.end();
+	        }
+	    };
+
+	    return self;
+	}
+
+	function create_indent(character, count) {
+	    return (new Array(count || 0).join(character || ''))
+	}
+
+	function resolve(data, indent, indent_count) {
+	    indent_count = indent_count || 0;
+	    var indent_spaces = create_indent(indent, indent_count);
+	    var name;
+	    var values = data;
+	    var interrupt = false;
+
+	    if (typeof data === 'object') {
+	        var keys = Object.keys(data);
+	        name = keys[0];
+	        values = data[name];
+
+	        if (values && values._elem) {
+	            values._elem.name = name;
+	            values._elem.icount = indent_count;
+	            values._elem.indent = indent;
+	            values._elem.indents = indent_spaces;
+	            values._elem.interrupt = values;
+	            return values._elem;
+	        }
+	    }
+
+	    var attributes = [],
+	        content = [];
+
+	    var isStringContent;
+
+	    function get_attributes(obj){
+	        var keys = Object.keys(obj);
+	        keys.forEach(function(key){
+	            attributes.push(attribute(key, obj[key]));
+	        });
+	    }
+
+	    switch(typeof values) {
+	        case 'object':
+	            if (values === null) break;
+
+	            if (values._attr) {
+	                get_attributes(values._attr);
+	            }
+
+	            if (values._cdata) {
+	                content.push(
+	                    ('<![CDATA[' + values._cdata).replace(/\]\]>/g, ']]]]><![CDATA[>') + ']]>'
+	                );
+	            }
+
+	            if (values.forEach) {
+	                isStringContent = false;
+	                content.push('');
+	                values.forEach(function(value) {
+	                    if (typeof value == 'object') {
+	                        var _name = Object.keys(value)[0];
+
+	                        if (_name == '_attr') {
+	                            get_attributes(value._attr);
+	                        } else {
+	                            content.push(resolve(
+	                                value, indent, indent_count + 1));
+	                        }
+	                    } else {
+	                        //string
+	                        content.pop();
+	                        isStringContent=true;
+	                        content.push(escapeForXML(value));
+	                    }
+
+	                });
+	                if (!isStringContent) {
+	                    content.push('');
+	                }
+	            }
+	        break;
+
+	        default:
+	            //string
+	            content.push(escapeForXML(values));
+
+	    }
+
+	    return {
+	        name:       name,
+	        interrupt:  interrupt,
+	        attributes: attributes,
+	        content:    content,
+	        icount:     indent_count,
+	        indents:    indent_spaces,
+	        indent:     indent
+	    };
+	}
+
+	function format(append, elem, end) {
+
+	    if (typeof elem != 'object') {
+	        return append(false, elem);
+	    }
+
+	    var len = elem.interrupt ? 1 : elem.content.length;
+
+	    function proceed () {
+	        while (elem.content.length) {
+	            var value = elem.content.shift();
+
+	            if (value === undefined) continue;
+	            if (interrupt(value)) return;
+
+	            format(append, value);
+	        }
+
+	        append(false, (len > 1 ? elem.indents : '')
+	            + (elem.name ? '</' + elem.name + '>' : '')
+	            + (elem.indent && !end ? '\n' : ''));
+
+	        if (end) {
+	            end();
+	        }
+	    }
+
+	    function interrupt(value) {
+	       if (value.interrupt) {
+	           value.interrupt.append = append;
+	           value.interrupt.end = proceed;
+	           value.interrupt = false;
+	           append(true);
+	           return true;
+	       }
+	       return false;
+	    }
+
+	    append(false, elem.indents
+	        + (elem.name ? '<' + elem.name : '')
+	        + (elem.attributes.length ? ' ' + elem.attributes.join(' ') : '')
+	        + (len ? (elem.name ? '>' : '') : (elem.name ? '/>' : ''))
+	        + (elem.indent && len > 1 ? '\n' : ''));
+
+	    if (!len) {
+	        return append(false, elem.indent ? '\n' : '');
+	    }
+
+	    if (!interrupt(elem)) {
+	        proceed();
+	    }
+	}
+
+	function attribute(key, value) {
+	    return key + '=' + '"' + escapeForXML(value) + '"';
+	}
+
+	module.exports = xml;
+	module.exports.element = module.exports.Element = element;
+
 
 /***/ },
 /* 124 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ function(module, exports) {
 
-	__webpack_require__(115)('observable');
+	
+	var XML_CHARACTER_MAP = {
+	    '&': '&amp;',
+	    '"': '&quot;',
+	    "'": '&apos;',
+	    '<': '&lt;',
+	    '>': '&gt;'
+	};
+
+	function escapeForXML(string) {
+	    return string && string.replace
+	        ? string.replace(/([&"<>'])/g, function(str, item) {
+	            return XML_CHARACTER_MAP[item];
+	          })
+	        : string;
+	}
+
+	module.exports = escapeForXML;
+
 
 /***/ }
 /******/ ]);
