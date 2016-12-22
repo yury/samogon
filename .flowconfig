@@ -1,0 +1,5 @@
+[ignore]
+<PROJECT_ROOT>/node_modules/config-chain/test/broken.json
+<PROJECT_ROOT>/node_modules/npm/node_modules/config-chain/test/broken.json
+<PROJECT_ROOT>/node_modules/npm/test/fixtures/config/package.json
+
