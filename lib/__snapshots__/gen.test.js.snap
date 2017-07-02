@@ -1,12 +1,14 @@
-exports[`test localeToAndroidFormat 1`] = `
-"<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`localeToAndroidFormat 1`] = `
+"<?xml version=\\"1.0\\" encoding=\\"UTF-8\\"?>
 <resources>
-    <string name=\"key1\">value1</string>
-    <string name=\"key3\">value3</string>
+    <string name=\\"key1\\">value1</string>
+    <string name=\\"key3\\">value3</string>
 </resources>"
 `;
 
-exports[`test localeToAppleRObjC 1`] = `
+exports[`localeToAppleRObjC 1`] = `
 "
 // RS.swift
 
@@ -26,15 +28,15 @@ public class RS: NSObject {
 "
 `;
 
-exports[`test localeToAppleStrings 1`] = `
-"\"key1\" = \"value1\";
+exports[`localeToAppleStrings 1`] = `
+"\\"key1\\" = \\"value1\\";
 /* comment */
-\"key3\" = \"value3\";"
+\\"key3\\" = \\"value3\\";"
 `;
 
-exports[`test localeToAppleStringsDict 1`] = `
-"<?xml version=\"1.0\" encoding=\"UTF-8\"?>
-<plist version=\"1.0\">
+exports[`localeToAppleStringsDict 1`] = `
+"<?xml version=\\"1.0\\" encoding=\\"UTF-8\\"?>
+<plist version=\\"1.0\\">
     <dict>
     </dict>
 </plist>"
